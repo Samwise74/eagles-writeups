@@ -89,10 +89,116 @@ Error parsing file
 $ ls asdf
 flag.png
 ```
-It didn't extract any of the other files, but we got `flag.png`!
+It didn't extract any of the other files, but we got `flag.png`!<br>
 ![flag.png](flag.png)
 ##### Disclaimer:
 This writeup is me trying to relive my thought process on how I initially solved this challenge weeks ago. If I make any unreasonable jumps in reasoning, it is because I accidentally left out some observation I had made at the time. Frequently checking the program's source will allow us to confirm all of our assumptions, but I wanted to leave all of the actual RE for solution 2. 
 ## Solution 2 - xor the file
-TODO (if I have time)
-tl;dr: look at the source, see that bytes 4 and 5 are key1 and key2 and the png is xor'd with these keys. undo the xor
+
+#### tl;dr: 
+look at the source, see that bytes 4 and 5 are key1 and key2 and the png is xor'd with these keys. undo the xor
+
+Due to the fact that the souce code is available, understanding what the executeable is doing becomes much easier. From the start we notice that the file contents are being read into a `char*` array along with the `sz` variable being passed by reference that represents the size of the file contents in `buff`.
+
+```c
+long sz = 0;
+char *buff = read_file(argv[1], &sz);
+```
+
+The next section will get the number of files that are being extracted as well as the offsets for each of the files in `arc.bin`.
+
+```c
+int filecnt = *(int *) buff;
+int *fileoffs = ((int *) buff) + 1; 
+```
+
+This data can be seen at the beginning of the acrhive as discussed in solution 1.
+
+```
+$ xxd -g 4 arc.bin | head -2
+00000000: 04000000 6ab70600 3aa60600 cfa80600  ....j...:.......
+00000010: 20000000 625368f4 d640259c e6bc0582   ...bSh..@%.....
+```
+
+The first 4 bytes will represent the number of file to be extracted and the following 4 sets of represent the offset to the beginning of each file.
+
+The next step in execution is parsing the data so that the data can be written into individual files.
+
+```c
+for (int i = 0; i < filecnt; i++) {
+    fblk_t blk;
+    if (parse_fblk(buff, sz, fileoffs[i], &blk)) {
+        /* snipped for brevity */
+    }
+
+    /* snipped for brevity */
+
+    FILE *fp = fopen(blk.name, "wb");
+
+    if (fwrite(blk.data, 1, blk.length, fp) != (size_t) blk.length) {
+        /* snipped for brevity */
+    }
+
+    fclose(fp);
+}
+```
+
+Inside `parse_fblk()` is where the archive data is manipulated to return the orginal data. This process can be seen in a for look that will take every other byte and xor it with 2 different keys which are also stored in the archive.
+
+```c
+char *blk = buff + off;
+int bsz = *(int *) blk;
+
+char k1 = blk[4], k2 = blk[5];
+char *name = blk + 6;
+int namelen = (int) strnlen(name, bsz-6);
+```
+
+As shown above, `key1` and `key2` are pulled from from the 2 bytes before the file name in the achive with the 4 bytes before that being the size of the file. The name length is also calculated as well as the starting offset of the file data.
+
+After finding all necissary variables it is possible to recover the original data. The for loop below will loop through each byte and swap every other byte as well as xoring it agains `k1` and `k2` respectively. If there is an odd number of byes in the data section then the last byte will always be xored with just `k1`
+
+```c
+for (int i = namelen + 7; i < bsz; i += 2) {
+    if (i+1 < bsz) {
+        char tmp = blk[i];
+        blk[i] = blk[i+1] ^ k1;
+        blk[i+1] = tmp ^ k2;
+    } else {
+        blk[i] ^= k1;
+    }
+}
+```
+
+Knowing all of this information, is is easy throw together a python script that will follow the same process and provide us with the flag.
+
+```python
+from struct import unpack
+
+infile = open('arc.bin', 'rb')
+outfile = open('flag.png', 'wb')
+
+buf = bytearray(infile.read()) 
+
+name_index = buf.find(b'flag.png\0')
+size, = unpack('<I', buf[name_index-6:name_index-2]) # Unpack the 4 byte size section from little endian
+k1 = buf[name_index - 2]
+k2 = buf[name_index - 1]
+
+start = name_index - 6
+data = name_index + len(b'flag.png\0')
+
+for i in range(len(b'flag.png\0') + 6, size, 2):
+    index = start + i
+    if i + 1 < size:
+        tmp = buf[index]
+        buf[index] = buf[index+1]^k1
+        buf[index+1] = tmp^k2
+    else:
+        buf[index] ^= k1
+
+outfile.write(buf[data:])
+```
+
+Flag:<br>
+![](flag.png)
