@@ -203,5 +203,8 @@ outfile.write(buf[data:])
 Flag:<br>
 ![](flag.png)
 
-# Video
+# Video Solution
 
+The image is a YouTube link
+
+[![archival video](http://img.youtube.com/vi/p2e1k-XDsWY/0.jpg)](https://youtu.be/p2e1k-XDsWY "archival video")
