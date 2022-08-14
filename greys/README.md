@@ -26,7 +26,7 @@ Incorrect Code, please re-enter
 Enter Code #1 (Trust: 997):
 ```
 
-Looking into this deduction furthen it can be seen that it is the count of 1's in the binary result of `123 ^ 124` as shown belowi
+Looking into this deduction further it can be seen that it is the count of 1's in the binary result of `123 ^ 124` as shown below.
 
 ```
 >>> bin(123 ^ 124)
@@ -47,7 +47,7 @@ Looking for a sequence of integers where adjacent numbers only differ by one bit
 116 => 0b1110100
 ```
 
-submitting this sequence in order will result in the trust only decreasing by 1.
+Submitting this sequence in order will result in the trust only decreasing by 1.
 
 ```
 Enter Code #1 (Trust: 1000):
