@@ -1,7 +1,7 @@
 # Archival
 ## Challenge
 #### tl;dr:
-Either patch the archive to recognize `flag.png` or xor the ciphertext using the keys stored in the file
+Either patch the archive to recognize `flag.png` or xor the ciphertext using the keys stored in the file.
 #### Description:
 > Check out this weird file I found. I think this program has something to do with it too?
 ### Initial RE
@@ -60,7 +60,7 @@ int filecnt = *(int *) buff;
 ```
 A quick look at the source reveals that a variable called 'filecnt' is set as the first `int` of the file. Thus, we can conclude that the first four bytes are the number of files that the extractor will extract. 
 
-Given that we're extracting four files, let's assume that the next four values (or sets of values) are meaningful, we see that for the next three `int`s of data, they each begin with `0x0006` With no other discernible pattern between them and the start of the first file (`yeehaw.png`). Let's assume that these three `int`s are meaningful. However, since we're looking for four values, that would mean the following `0x20` is also is also part of this same set. All four files are pngs, so `0x20` doesn't make sense as a length field. Since this is an archive file, these values may indicate the offset to the start of each file from the start of the archive; let's see what's at `0x20`:
+Given that we're extracting four files, let's assume that the next four values (or sets of values) are meaningful, we see that for the next three `int`s of data, they each begin with `0x0006` with no other discernible pattern between them and the start of the first file (`yeehaw.png`). Let's assume that these three `int`s are meaningful. However, since we're looking for four values, that would mean the following `0x20` is also part of this same set. All four files are pngs, so `0x20` doesn't make sense as a length field. Since this is an archive file, these values may indicate the offset to the start of each file from the start of the archive; let's see what's at `0x20`:
 ```
 $ xxd -g 4 arc.bin | grep 00000020
 00000020: 17a60600 e1917965 65686177 2e706e67  ......yeehaw.png
@@ -96,9 +96,9 @@ This writeup is me trying to relive my thought process on how I initially solved
 ## Solution 2 - xor the file
 
 #### tl;dr: 
-look at the source, see that bytes 4 and 5 are key1 and key2 and the png is xor'd with these keys. undo the xor
+Look at the source, see that bytes 4 and 5 are key1 and key2 and the png is xor'd with these keys. Undo the xor.
 
-Due to the fact that the souce code is available, understanding what the executeable is doing becomes much easier. From the start we notice that the file contents are being read into a `char*` array along with the `sz` variable being passed by reference that represents the size of the file contents in `buff`.
+Due to the fact that the source code is available, understanding what the executeable is doing becomes much easier. From the start we notice that the file contents are being read into a `char*` array along with the `sz` variable being passed by reference that represents the size of the file contents in `buff`.
 
 ```c
 long sz = 0;
@@ -112,7 +112,7 @@ int filecnt = *(int *) buff;
 int *fileoffs = ((int *) buff) + 1; 
 ```
 
-This data can be seen at the beginning of the acrhive as discussed in solution 1.
+This data can be seen at the beginning of the archive as discussed in solution 1.
 
 ```
 $ xxd -g 4 arc.bin | head -2
@@ -120,7 +120,7 @@ $ xxd -g 4 arc.bin | head -2
 00000010: 20000000 625368f4 d640259c e6bc0582   ...bSh..@%.....
 ```
 
-The first 4 bytes will represent the number of file to be extracted and the following 4 sets of represent the offset to the beginning of each file.
+The first 4 bytes will represent the number of files to be extracted and the following 4 sets will represent the offset to the beginning of each file.
 
 The next step in execution is parsing the data so that the data can be written into individual files.
 
@@ -143,7 +143,7 @@ for (int i = 0; i < filecnt; i++) {
 }
 ```
 
-Inside `parse_fblk()` is where the archive data is manipulated to return the orginal data. This process can be seen in a for look that will take every other byte and xor it with 2 different keys which are also stored in the archive.
+Inside `parse_fblk()` is where the archive data is manipulated to return the original data. This process can be seen in a for loop that will take every other byte and xor with 2 different keys which are also stored in the archive.
 
 ```c
 char *blk = buff + off;
@@ -154,9 +154,9 @@ char *name = blk + 6;
 int namelen = (int) strnlen(name, bsz-6);
 ```
 
-As shown above, `key1` and `key2` are pulled from from the 2 bytes before the file name in the achive with the 4 bytes before that being the size of the file. The name length is also calculated as well as the starting offset of the file data.
+As shown above, `key1` and `key2` are pulled from from the 2 bytes before the file name in the archive with the 4 bytes before that being the size of the file. The name length is also calculated as well as the starting offset of the file data.
 
-After finding all necissary variables it is possible to recover the original data. The for loop below will loop through each byte and swap every other byte as well as xoring it agains `k1` and `k2` respectively. If there is an odd number of byes in the data section then the last byte will always be xored with just `k1`
+After finding all necessary variables, it is possible to recover the original data. The for loop below will loop through each byte and swap every other byte as well as xoring it against `k1` and `k2` respectively. If there is an odd number of bytes in the data section, then the last byte will always be xored with just `k1`.
 
 ```c
 for (int i = namelen + 7; i < bsz; i += 2) {
@@ -170,7 +170,7 @@ for (int i = namelen + 7; i < bsz; i += 2) {
 }
 ```
 
-Knowing all of this information, is is easy throw together a python script that will follow the same process and provide us with the flag.
+Knowing all of this information, it is easy to throw together a python script that will follow the same process and provide us with the flag.
 
 ```python
 from struct import unpack
@@ -205,6 +205,6 @@ Flag:<br>
 
 # Video Solution
 
-The image is a YouTube link
+The image is a YouTube link.
 
 [![archival video](http://img.youtube.com/vi/p2e1k-XDsWY/0.jpg)](https://youtu.be/p2e1k-XDsWY "archival video")
